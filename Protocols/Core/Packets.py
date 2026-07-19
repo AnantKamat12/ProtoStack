@@ -1,7 +1,5 @@
 import struct
-
-class Packet:
-    # Format string layout: 
+   # Format string layout: 
     # '>' '<'<means Big-Endian, Little-Endian 
 
     # ENDIANNESS EXAMPLE (Using 32-bit Hex Value: 0x12345678)
@@ -24,16 +22,18 @@ class Packet:
     # 1003            |  12           |  Most Significant Byte (MSB)
 
     # ==============================================================================
-
+#This packet will be common for most of protocals
+class Packet:
+ 
     # 'B' = Type (1 byte), 'H' = Seq Num (2 bytes), 'B' = Length (1 byte)
     HEADER_FORMAT = ">BHB" 
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT) # This will equal 4 bytes
 
     def __init__(self, packet_type: int, seq_num: int, payload: bytes):
-        self.packet_type = packet_type  # e.g., 1 for DATA, 2 for ACK
-        self.seq_num = seq_num          # Frame sequence tracker
-        self.payload = payload          # The raw actual message bytes
-        self.length = len(payload)      # Dynamic size of the payload
+        self.packet_type = packet_type  # Ex:1 for DATA, 2 for ACK
+        self.seq_num = seq_num          # Frame sequence tracker. seq_num will go in header_bytes:
+        self.payload = payload          # The raw actual messgse bytes(bytes in the packet)
+        self.length = len(payload)      # Dynamic size of the payloads
 
     def serialize(self) -> bytes:
         """Converts the packet object into a raw binary stream to send over the 'wire'."""
