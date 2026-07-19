@@ -45,7 +45,8 @@ class Packet:
             self.length
         )
         # 2. Append the payload bytes directly after the header
-        return header_bytes + self.payload
+        return (header_bytes + self.payload)
+    
 
     @classmethod
     def deserialize(cls, raw_bytes: bytes):
@@ -61,5 +62,28 @@ class Packet:
         payload_part = raw_bytes[cls.HEADER_SIZE : cls.HEADER_SIZE + length]
 
         return cls(packet_type, seq_num, payload_part)
-if __name__=="__main__":
-    Packet=Packet()
+if __name__ == "__main__":
+
+    print("\n========== Example 1 : DATA Packet ==========\n")
+
+    packet = Packet(
+        packet_type=1,
+        seq_num=100,
+        payload=b"Hello"
+    )
+
+    raw = packet.serialize()
+    print(type(raw))#print(help(raw))
+    print("Serialized Bytes:")
+    print(raw)
+    print(raw.hex())
+
+    recovered = Packet.deserialize(raw)
+
+    print("\nRecovered Packet")
+    print("Type    :", recovered.packet_type)
+    print("Seq Num :", recovered.seq_num,"asci value of 'd':",100 , "i.e 0x0064")
+    print("Length  :", recovered.length)
+    print("Payload :", recovered.payload)
+
+
