@@ -13,8 +13,9 @@ class Packet:
         self.seq_num = seq_num          # Frame sequence tracker. seq_num will go in header_bytes:
         self.payload = payload          # The raw actual messgse bytes(bytes in the packet)
         self.length = len(payload)      # Dynamic size of the payloads
+        self.payload_len = len(payload)
 
-    def serialize(self) -> bytes:
+    def serialize_packet(self) -> bytes:
         """Converts the packet object into a raw binary stream to send over the 'wire'."""
         # 1. Pack the header variables into their 4-byte structural layout
         header_bytes = struct.pack(
@@ -35,7 +36,7 @@ class Packet:
     
 
     @classmethod
-    def deserialize(cls, raw_bytes: bytes):
+    def deserialize_packet(cls, raw_bytes: bytes):
         """Takes a raw binary stream off the 'wire' and reconstructs the Packet object."""
         if len(raw_bytes) < cls.HEADER_SIZE:
             raise ValueError("Data stream too short to contain a valid header!")
@@ -79,13 +80,13 @@ if __name__ == "__main__":
     )
     print(type(packet))
 
-    raw = packet.serialize()
+    raw = packet.serialize_packet()
     print(type(raw))#print(help(raw))
-    print("Serialized Bytes:")
+    print("serialize_packetd Bytes:")
     print(raw)
     print(raw.hex())
 
-    recovered = Packet.deserialize(raw)
+    recovered = Packet.deserialize_packet(raw)
     print(type(recovered))
     packet.check_crc()
     print("\nRecovered Packet")
