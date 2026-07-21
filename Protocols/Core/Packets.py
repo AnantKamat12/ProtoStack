@@ -1,9 +1,10 @@
 import struct
 import zlib
+from AbsPacket import AbsPacket
 #This packet will be common for most of protocals
-class Packet:
+class Packet(AbsPacket):
  #tbd:make endianess as input decided by host
- #tbd:make an absatrct parent class let this inherit this packet
+
     # 'B' = Type (1 byte), 'H' = Seq Num (2 bytes), 'B' = Length (1 byte)
     HEADER_FORMAT = ">BHB" 
     HEADER_SIZE = struct.calcsize(HEADER_FORMAT) # This will equal 4 bytes
