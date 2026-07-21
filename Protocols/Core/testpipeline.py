@@ -1,7 +1,3 @@
-import sys
-import os
-
-
 from Segmenter import Segmenter
 from PacketSender import PacketSender
 from VirtualChannel import VirtualChannel
@@ -13,78 +9,67 @@ def run_pipeline_test():
     print("🚀 STARTING PROTOSTACK END-TO-END PIPELINE TEST")
     print("=" * 60)
 
-    # 1. SETUP PIPELINE & CONFIGURATION
     raw_message = "Hello, ProtoStack! Testing the continuous byte stream."
-    payload_size = 8  # Small payload size to force multiple packets
-    
-    # Initialize VirtualChannel with 0% drop rate for baseline validation
-    channel = VirtualChannel(capacity=2048, byte_drop_rate=0.0)
-    
-    print(f"\n[1] Original Message: '{raw_message}'")
-    print(f"    Message Size: {len(raw_message)} bytes")
-    print(f"    Payload Size per Packet: {payload_size} bytes")
+    payload_size = 8
 
-    # 2. SEGMENTATION (App Data -> Packet Train)
+    channel = VirtualChannel(byte_drop_rate=0,bit_flip_rate=0.0)
+
+    print(f"\nOriginal Message: '{raw_message}'")
+    print(f"Message Size: {len(raw_message)} bytes")
+    print(f"Payload Size per Packet: {payload_size} bytes")
+
     data_bytes = raw_message.encode("utf-8")
     packet_train = Segmenter.segment(data_bytes, payload_size=payload_size)
-    
-    print(f"\n[2] Segmented into {len(packet_train)} packets.")
-    for i, pkt in enumerate(packet_train):
-        print(f"    📦 Packet {i}: Seq={pkt.seq_num}")
 
-    # 3. TRANSMISSION (Packet Train -> Raw Byte Stream -> Channel FIFO)
-    bytes_sent = PacketSender.send_packet_train(packet_train)
-    print(f"\n[3] PacketSender serialized packets and transmitted {bytes_sent} bytes.")
-    print(f"    Channel FIFO Current Queue Size: {len(channel.queue)} bytes")
+    print(f"\nSegmented into {len(packet_train)} packets.")
 
-    # 4. RECEIVER & DESERIALIZATION (Channel FIFO -> Stream -> Packets)
+    for packet in packet_train:
+        print(f"Packet Seq={packet.seq_num}")
+
+    bytes_sent = PacketSender.send_packet_train(packet_train, channel)
+
+    print(f"\nTransmitted {bytes_sent} bytes.")
+    print(f"Channel Queue Size: {channel.available()} bytes")
+
     HEADER_SIZE = 4
     CRC_SIZE = 4
+
     received_packets = []
 
-    print("\n[4] Receiver pulling raw bytes off VirtualChannel FIFO...")
+    while channel.available():
 
-    while channel.has_data():
-        # Step A: Read fixed-length Header bytes
-        header_bytes = channel.read(HEADER_SIZE)
-        if len(header_bytes) < HEADER_SIZE:
-            print("    ⚠️ Incomplete header received. Wire stream truncated.")
+        header = channel.read(HEADER_SIZE)
+
+        if len(header) < HEADER_SIZE:
             break
 
-        # Extract payload length byte from header
-        payload_len = header_bytes[3]
+        payload_length = header[3]
 
-        # Step B: Read exact variable Payload + fixed CRC32 Trailer bytes
-        remaining_bytes_needed = payload_len + CRC_SIZE
-        rest_bytes = channel.read(remaining_bytes_needed)
+        body = channel.read(payload_length + CRC_SIZE)
 
-        if len(rest_bytes) < remaining_bytes_needed:
-            print("    ⚠️ Incomplete payload/CRC received. Wire stream truncated.")
+        if len(body) < payload_length + CRC_SIZE:
             break
 
-        # Step C: Reconstruct full raw frame bytes & deserialize
-        full_frame_bytes = header_bytes + rest_bytes
-        
+        frame = header + body
+
         try:
-            pkt = Packet.deserialize_packet(full_frame_bytes)
-            received_packets.append(pkt)
-            print(f"    ✅ Deserialized & Validated Packet Seq {pkt.seq_num} (CRC PASS)")
+            packet = Packet.deserialize_packet(frame)
+            received_packets.append(packet)
+            print(f"Received Packet Seq={packet.seq_num}")
+
         except ValueError as e:
-            print(f"    ❌ Packet Deserialization/CRC Error: {e}")
+            print(e)
 
-    # 5. REASSEMBLY & INTEGRITY CHECK (Packets -> Reconstructed Data)
-    print(f"\n[5] Reassembling {len(received_packets)} received packets...")
-    reconstructed_bytes = Segmenter.reassemble(received_packets)
-    reconstructed_message = reconstructed_bytes.decode("utf-8")
-
+    reconstructed = Segmenter.reassemble(received_packets)
+    reconstructed_message = reconstructed.decode('utf-8')
     print("\n" + "=" * 60)
-    print(f"Original:      '{raw_message}'")
-    print(f"Reconstructed: '{reconstructed_message}'")
+    print(f"Original      : {raw_message}")
+    print(f"Reconstructed : {reconstructed_message}")
     print("=" * 60)
 
-    # Integrity Assertion
-    assert raw_message == reconstructed_message, "❌ Test Failed: Reconstructed message does not match original!"
-    print("🎉 SUCCESS: Pipeline test passed with 100% data integrity!\n")
+    assert raw_message == reconstructed_message
+
+    print("Pipeline Test Passed")
 
 
 if __name__ == "__main__":

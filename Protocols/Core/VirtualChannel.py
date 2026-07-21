@@ -1,53 +1,51 @@
-import random
 from collections import deque
+import random
+
 
 class VirtualChannel:
-    _instance = None
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+    def __init__(self, capacity=2048, byte_drop_rate=0.0,bit_flip_rate:float=0):
+        self._capacity = capacity
+        self._byte_drop_rate = byte_drop_rate
+        self._bit_flip_rate=bit_flip_rate
+        self._queue = deque()
 
-    def __init__(self, capacity: int = 2048, byte_drop_rate: float = 0.0):
-        # Prevent re-initializing the singleton on subsequent calls
-        if self._initialized:
-            return
-        
-        self.capacity = capacity
-        self.byte_drop_rate = byte_drop_rate
-        self.queue = deque()  # FIFO holding raw bytes
-        self._initialized = True
+    def configure(self, capacity=None, byte_drop_rate=None):
+        if capacity is not None:
+            self._capacity = capacity
 
-    def send(self, data: bytes) -> int:
-        """Pushes raw continuous bytes onto the wire FIFO buffer."""
-        if len(self.queue) + len(data) > self.capacity:
-            raise BufferError("[Channel] ⚠️ Overflow! FIFO buffer full.")
+        if byte_drop_rate is not None:
+            self._byte_drop_rate = byte_drop_rate
 
-        bytes_sent = 0
+    def send(self, data: bytes):
+
+        if len(self._queue) + len(data) > self._capacity:
+            raise BufferError("Virtual Channel Overflow")
+
         for byte in data:
-            if random.random() >= self.byte_drop_rate:
-                self.queue.append(byte)
-                bytes_sent += 1
-            else:
-                print(f"[Channel] ⚠️ Dropped byte 0x{byte:02X} on wire")
-        return bytes_sent
 
-    def read(self, num_bytes: int) -> bytes:
-        """Pulls up to `num_bytes` from the FIFO buffer."""
-        read_data = bytearray()
-        while self.queue and len(read_data) < num_bytes:
-            read_data.append(self.queue.popleft())
-        return bytes(read_data)
+            if random.random() >= self._byte_drop_rate:
 
-    def has_data(self) -> bool:
-        return len(self.queue) > 0
+                if random.random() < self._bit_flip_rate:
+
+                    bit = random.randint(0, 7)
+                    byte ^= (1 << bit)
+
+                self._queue.append(byte)
+
+                
+
+    def read(self, n: int):
+
+        out = bytearray()
+
+        while self._queue and len(out) < n:
+            out.append(self._queue.popleft())#we will pop by FIFO ,the buffer can hold upto self._capacity bytes
+
+        return bytes(out)
+
+    def available(self):
+        return len(self._queue)
 
     def clear(self):
-        """Empties the FIFO buffer between test runs."""
-        self.queue.clear()
-
-
-# Single global instance will be created when file is imported
-channel = VirtualChannel()
+        self._queue.clear()
