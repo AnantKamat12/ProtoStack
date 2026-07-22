@@ -12,5 +12,7 @@ class FSM(ABC):
             event
         )
         return self.state
+    def get_state(self):
+        return self.state
 
    

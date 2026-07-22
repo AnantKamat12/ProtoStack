@@ -1,6 +1,6 @@
 from SenderTransitionTable import *
 from FSM import *
-class ReceiverFSM(FSM):
+class SenderFSM(FSM):
 
     def __init__(self):
         super().__init__(
