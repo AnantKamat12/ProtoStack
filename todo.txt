@@ -1,0 +1,3 @@
+I need to write ut for each module and moe the already written tests to this folder(fixing their imports)
+date 24/7/26 this project initial POCs have been done thsi project will grow in architecture and protocols ad i go on implementing 
+protocol and chaging architecture (absatrction, methods of the classes)
