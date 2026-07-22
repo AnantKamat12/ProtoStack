@@ -29,7 +29,7 @@ class Packet(AbsPacket):
         self.header_bytes=header_bytes
         body=header_bytes+self.payload
         self.body=body
-        crc_val = zlib.crc32(body)
+        crc_val = zlib.crc32(body)# think of implementing cstom function for crc or checksum
         trailer_bytes = struct.pack(self.TRAILER_FORMAT, crc_val)
         self.trailer=trailer_bytes
 
