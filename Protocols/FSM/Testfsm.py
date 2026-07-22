@@ -2,7 +2,6 @@ from SenderFSM import SenderFSM
 from ReceiverFSM import ReceiverFSM
 from Events import Event
 
-
 class TestFSM:
 
     @staticmethod
